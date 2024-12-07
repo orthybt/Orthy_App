@@ -1,0 +1,6 @@
+DistalTip:211,585
+MesialTip:296,586
+NegativeTorque:210,660
+PositiveTorque:296,664
+MesialRotation:299,626
+DistalRotation:213,623
