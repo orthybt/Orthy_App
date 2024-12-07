@@ -265,7 +265,9 @@ class ImageOverlayApp:
                 'command': self.toggle_full_control,
                 'grid': {'row': 18, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'}, # Adjusted row
                 'width': 10,
-                'variable_name': 'btn_full_control'
+                'variable_name': 'btn_full_control',
+                'bg': 'red', # Initial state is inactive
+                'fg': 'white'
             },
             {
                 'text': 'Ctrl Mode',
@@ -1306,8 +1308,25 @@ class ImageOverlayApp:
                     "Click 'No' to select new coordinates"
                 )
                 if response:
-                    # Load existing coordinates
-                    self.load_saved_coords()
+                    # Ask if user wants to load from default or choose file
+                    load_choice = messagebox.askyesno(
+                        "Load Coordinates",
+                        "Would you like to:\n\n" +
+                        "Click 'Yes' to load default coordinates\n" +
+                        "Click 'No' to choose a coordinates file"
+                    )
+                    if load_choice:
+                        # Load default coordinates
+                        self.load_saved_coords()
+                    else:
+                        # Let user choose a file
+                        filepath = filedialog.askopenfilename(
+                            title="Select coordinates file",
+                            filetypes=[("Text files", "*.txt")],
+                            initialdir=self.base_dir
+                        )
+                        if filepath:
+                            self.load_coords_from_file(filepath)
                 else:
                     # Reset coordinates by selecting new ones
                     self.select_control_coordinates()
@@ -1342,10 +1361,10 @@ class ImageOverlayApp:
             self.full_control_mode = True
             self.start_full_control_hotkeys()
             logging.info(f"Full Control Mode Enabled for Maestro {self.maestro_version}.")
-            
+                
             # Update button text and color for active state
             self.btn_full_control.config(
-                text="Disable FullCtrl",
+                text="Full_Ctrl_ON",
                 bg='green',  # Set background to green when active
                 fg='white'   # Set text color to white for better contrast
             )
@@ -1355,12 +1374,12 @@ class ImageOverlayApp:
             self.stop_full_control_hotkeys()
             logging.info("Full Control Mode Disabled.")
             
-        # Update button text and color for inactive state
-        self.btn_full_control.config(
-            text="FullCtrl",
-            bg='red',    # Set background to red when inactive
-            fg='white'   # Set text color to white for better contrast
-        )
+            # Update button text and color for inactive state
+            self.btn_full_control.config(
+                text="FullCtrl",
+                bg='red',    # Set background to red when inactive
+                fg='white'   # Set text color to white for better contrast
+            )
 
     def select_control_coordinates(self):
         """
