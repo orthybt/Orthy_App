@@ -127,7 +127,7 @@ class ImageOverlayApp:
         self.active_image_name = None  # Name of the active image
         self.previous_active_image_name = None  # To keep track of the previous active image
 
-        # Mouse event variables
+        # Mouse event variable8s
         self.start_x = 0
         self.start_y = 0
         self.i6s_dragging = False
@@ -668,7 +668,6 @@ class ImageOverlayApp:
 
     ##########################################################################################################
     ###                          --- Predefined Image Management Methods ---                                ###
-    ##########################################################################################################
 
     def toggle_ruler(self):
         """
@@ -1516,3 +1515,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = ImageOverlayApp(root)
     root.mainloop()
+
