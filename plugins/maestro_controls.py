@@ -85,10 +85,23 @@ class MaestroControlsPlugin(OrthyPlugin):
         """
         Guides the user to select coordinates for each control by clicking on the screen.
         """
-        controls = ['DistalTip', 'MesialTip', 'NegativeTorque', 'PositiveTorque', 'MesialRotation', 'DistalRotation']
+        controls = [
+            'DistalTip', 'MesialTip', 
+            'NegativeTorque', 'PositiveTorque', 
+            'MesialRotation', 'DistalRotation',
+            'Intrusion', 'Extrusion',
+            'DistalLinear', 'MesialLinear'
+        ]
         self.ghost_click_positions = {}
 
-        messagebox.showinfo("Coordinate Selection", "You'll be prompted to click on each control's position.")
+        messagebox.showinfo("Coordinate Selection", 
+            "You'll be prompted to click on each control's position.\n\n"
+            "Numpad Controls:\n"
+            "7 - Distal Tip       8 - Positive Torque    9 - Mesial Tip\n"
+            "4 - Distal Rotation  5 - Negative Torque    6 - Mesial Rotation\n"
+            "1 - Intrusion        2 - Distal Linear      3 - Mesial Linear\n"
+            "0 - Extrusion"
+        )
 
         for control in controls:
             messagebox.showinfo("Select Control", f"Please click on the '{control}' control on the screen.")
@@ -98,7 +111,9 @@ class MaestroControlsPlugin(OrthyPlugin):
             self.app.root.deiconify()
             self.app.image_window.deiconify()
 
-        save_coords = messagebox.askyesno("Save Coordinates", "Do you want to save these coordinates for future use?")
+        save_coords = messagebox.askyesno("Save Coordinates", 
+            "Do you want to save these coordinates for future use?"
+        )
         if save_coords:
             self.save_coords_to_file()
 
@@ -126,12 +141,24 @@ class MaestroControlsPlugin(OrthyPlugin):
     def save_coords_to_file(self):
         """
         Saves the ghost click positions to a file.
+        Format:
+        ControlName:X,Y
         """
         coords_file = os.path.join(self.app.base_dir, f'coords_maestro_{self.maestro_version}.txt')
         try:
             with open(coords_file, 'w') as f:
-                for control, position in self.ghost_click_positions.items():
-                    f.write(f"{control}:{position[0]},{position[1]}\n")
+                # Save in a specific order for readability
+                control_order = [
+                    'DistalTip', 'MesialTip',
+                    'NegativeTorque', 'PositiveTorque',
+                    'MesialRotation', 'DistalRotation',
+                    'Intrusion', 'Extrusion',
+                    'DistalLinear', 'MesialLinear'
+                ]
+                for control in control_order:
+                    if control in self.ghost_click_positions:
+                        position = self.ghost_click_positions[control]
+                        f.write(f"{control}:{position[0]},{position[1]}\n")
             logging.info(f"Coordinates saved to {coords_file}")
             messagebox.showinfo("Coordinates Saved", f"Coordinates saved to {coords_file}")
         except Exception as e:
@@ -215,23 +242,47 @@ class MaestroControlsPlugin(OrthyPlugin):
 
     def start_full_control_hotkeys(self): # IF SOMEONE IS WORKING ON REMOTE DESKTOP, IT WILL NOT WORK, UNLESS YOU SELECT IN LOCAL RESOURCES, TO USE WIN COMBINATIONS ONLY FROM YOUR LOCAL COMPUTER... !GPT NEVER DELETE THIS COMMENT! EVER! EVER! 
         """
-        Starts listening for keyboard shortcuts.
+        Starts listening for keyboard shortcuts using virtual key codes.
+        VK codes:
+        104 - numpad 8 (positive torque)
+        101 - numpad 5 (negative torque) 
+        103 - numpad 7 (distal tip)
+        105 - numpad 9 (mesial tip)
+        102 - numpad 6 (mesial rotation)
+        100 - numpad 4 (distal rotation)
+        97  - numpad 1 (intrusion)
+        96  - numpad 0 (extrusion)
+        98  - numpad 2 (distal linear)
+        99  - numpad 3 (mesial linear)
         """
-        key_combinations = {
-            '<alt>+<ctrl>+a': 'DistalTip',
-            '<alt>+<ctrl>+q': 'NegativeTorque',
-            '<alt>+<ctrl>+w': 'PositiveTorque',
-            '<alt>+<ctrl>+s': 'MesialTip',
-            '<alt>+<ctrl>+x': 'MesialRotation',
-            '<alt>+<ctrl>+z': 'DistalRotation',
-        }
-
-        hotkeys = {}
-        for key_combination, action_name in key_combinations.items():
-            hotkeys[key_combination] = lambda a=action_name: self.perform_ghost_click(a)
-
         try:
-            self.full_control_hotkey_listener = keyboard.GlobalHotKeys(hotkeys)
+            def on_press(key):
+                try:
+                    vk = key.vk
+                    if vk == 104:  # Numpad 8
+                        self.perform_ghost_click('PositiveTorque')
+                    elif vk == 101:  # Numpad 5
+                        self.perform_ghost_click('NegativeTorque')
+                    elif vk == 103:  # Numpad 7
+                        self.perform_ghost_click('DistalTip')
+                    elif vk == 105:  # Numpad 9
+                        self.perform_ghost_click('MesialTip')
+                    elif vk == 102:  # Numpad 6
+                        self.perform_ghost_click('MesialRotation')
+                    elif vk == 100:  # Numpad 4
+                        self.perform_ghost_click('DistalRotation')
+                    elif vk == 97:   # Numpad 1
+                        self.perform_ghost_click('Intrusion')
+                    elif vk == 96:   # Numpad 0
+                        self.perform_ghost_click('Extrusion')
+                    elif vk == 98:   # Numpad 2
+                        self.perform_ghost_click('DistalLinear')
+                    elif vk == 99:   # Numpad 3
+                        self.perform_ghost_click('MesialLinear')
+                except AttributeError:
+                    pass  # Key doesn't have a vk code
+
+            self.full_control_hotkey_listener = keyboard.Listener(on_press=on_press)
             self.full_control_hotkey_listener.daemon = True
             self.full_control_hotkey_listener.start()
             logging.info("Full Control Hotkeys listener started")
@@ -247,6 +298,20 @@ class MaestroControlsPlugin(OrthyPlugin):
             self.full_control_hotkey_listener.stop()
             self.full_control_hotkey_listener = None
             logging.info("Full Control Hotkeys listener stopped")
+
+    def cleanup_listeners(self):
+        """
+        Explicitly cleanup all keyboard listeners
+        """
+        # Stop full control hotkeys
+        if hasattr(self, 'full_control_hotkey_listener'):
+            self.full_control_hotkey_listener.stop()
+            self.full_control_hotkey_listener = None
+        
+        # Stop global key capture
+        if hasattr(self, 'keyboard_listener'):
+            self.keyboard_listener.stop()
+            self.keyboard_listener = None
 
     def perform_ghost_click(self, action_name):
         """
@@ -336,4 +401,4 @@ class MaestroControlsPlugin(OrthyPlugin):
         Cleanup plugin resources.
         """
         if self.full_control_mode:
-            self.stop_full_control_hotkeys()
+            self.cleanup_listeners()
