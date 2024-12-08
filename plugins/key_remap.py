@@ -27,14 +27,7 @@ class KeyRemapPlugin(OrthyPlugin):
         self.app = app_instance
         self.start_remap_listener()
         
-        # Add button to UI
-        if self.app and hasattr(self.app, 'predefined_buttons'):
-            btn_config = self.get_buttons()[0]
-            self.app.create_button(self.app.root, btn_config)
-            logging.debug("KeyRemap button created")
-        else:
-            logging.error("Failed to create KeyRemap button")
-        
+        # Remove button creation from initialize - let OrthyApp handle it
         logging.debug("KeyRemap plugin initialized")
 
     def get_name(self):
@@ -42,7 +35,7 @@ class KeyRemapPlugin(OrthyPlugin):
 
     def get_buttons(self):
         logging.debug("KeyRemap get_buttons called")
-        buttons = [{
+        return [{
             'text': 'Remap: ON' if self.enabled else 'Remap: OFF',
             'command': self.toggle_remap,
             'grid': {'row': 7, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
@@ -51,8 +44,6 @@ class KeyRemapPlugin(OrthyPlugin):
             'relief': 'sunken' if self.enabled else 'raised',
             'bg': '#a0ffa0' if self.enabled else '#ffa0a0'
         }]
-        logging.debug(f"KeyRemap returning {len(buttons)} buttons")
-        return buttons
 
     def toggle_remap(self):
         self.enabled = not self.enabled

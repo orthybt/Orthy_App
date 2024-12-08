@@ -130,7 +130,7 @@ class ImageOverlayApp:
         # Mouse event variables
         self.start_x = 0
         self.start_y = 0
-        self.is_dragging = False
+        self.i6s_dragging = False
         self.is_rotation_point_mode = False  # Rotation point selection mode
 
         # Additional windows
