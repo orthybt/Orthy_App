@@ -6,6 +6,7 @@ from pynput import keyboard, mouse
 import logging
 import os
 import ctypes
+from ctypes import wintypes
 
 class MaestroControlsPlugin(OrthyPlugin):
     def __init__(self):
@@ -315,15 +316,23 @@ class MaestroControlsPlugin(OrthyPlugin):
 
     def perform_ghost_click(self, action_name):
         """
-        Performs a ghost click for the given action.
+        Performs a ghost click and returns cursor to original position.
         """
         position = self.ghost_click_positions.get(action_name)
         if position is None:
             logging.error(f"No position defined for action '{action_name}'")
             return
 
+        # Get current cursor position using GetCursorPos
+        point = wintypes.POINT()
+        ctypes.windll.user32.GetCursorPos(ctypes.byref(point))
+        original_x, original_y = point.x, point.y
+
         logging.info(f"Performing ghost click for '{action_name}' at position {position}")
         self.ghost_click_at_position(position)
+
+        # Return to original position using SetCursorPos
+        ctypes.windll.user32.SetCursorPos(original_x, original_y)
 
     def ghost_click_at_position(self, position):
         """

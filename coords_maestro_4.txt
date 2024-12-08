@@ -1,6 +1,10 @@
-DistalTip:202,578
-MesialTip:288,580
-NegativeTorque:202,653
-PositiveTorque:289,655
-MesialRotation:288,618
-DistalRotation:205,616
+DistalTip:204,577
+MesialTip:287,577
+NegativeTorque:202,654
+PositiveTorque:291,651
+MesialRotation:290,617
+DistalRotation:207,616
+Intrusion:204,727
+Extrusion:291,729
+DistalLinear:204,764
+MesialLinear:288,766

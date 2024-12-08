@@ -12,12 +12,14 @@ import logging   # For logging
 from lxml import etree  # For SVG manipulation
 import datetime  # For date handling
 import ctypes
+import importlib  # For dynamic imports
 from ctypes import wintypes
 from pynput.keyboard import Key
 import logging
 from logging import Handler
 import tkinter as tk
 from  core.plugin_loader import PluginLoader # Import the PluginLoader class from the core.plugin_loader module
+from plugins.key_remap import KeyRemapPlugin
 
 # Configure the logger
 logging.basicConfig(
@@ -98,15 +100,13 @@ class ImageOverlayApp:
     Main application class that handles image loading, transformations,
     and user interactions through the GUI.
     """
-    
-     
     def __init__(self, root):
         self.root = root
         self.root.title("Controls")
         self.image_window_visible = False
-
-        # Initialize plugin system before GUI setup
-        from core.plugin_loader import PluginLoader
+        # Add small_font initialization before plugin loading
+        self.small_font = tk.font.Font(size=8)
+        # Initialize plugin loader after font setup
         self.plugin_loader = PluginLoader()
         self.plugin_loader.load_plugins(self)
 
@@ -147,17 +147,8 @@ class ImageOverlayApp:
         self.full_control_mode = False
         self.full_control_hotkey_listener = None
 
-        # Define the positions for ghost clicks (x, y)
-        self.ghost_click_positions = {
-            'DistalTip': (100, 200),
-            'NegativeTorque': (150, 250),
-            'PositiveTorque': (200, 300),
-            'MesialTip': (250, 350),
-        }
-
-        #initialize the plugin system
-        self.plugin_loader = PluginLoader()
-        self.plugin_loader.load_plugins(self)
+        # Declare the positions for ghost clicks (x, y)
+        self.ghost_click_positions = {}
 
         # Initialize the GUI
         self.setup_buttons_window()
@@ -266,10 +257,30 @@ class ImageOverlayApp:
         self.create_active_image_control(btn_frame)
         self.create_predefined_image_buttons(btn_frame)
 
-        # Plugin buttons
+        # Plugin buttons section with enhanced logging
+        plugin_button_count = 0
+        logging.info(f"Starting plugin button setup")
+        logging.info(f"Plugin loader exists: {hasattr(self, 'plugin_loader')}")
+        logging.info(f"Total plugins loaded: {len(self.plugin_loader.plugins)}")
+        
         for plugin in self.plugin_loader.plugins.values():
-            for btn_cfg in plugin.get_buttons():
+            plugin_name = plugin.get_name()
+            buttons = plugin.get_buttons()
+            logging.info(f"Processing plugin: {plugin_name}")
+            logging.info(f"Found {len(buttons)} buttons for plugin {plugin_name}")
+            
+            current_row = 7  # Start after standard buttons
+            for btn_cfg in buttons:
+                # Add row to grid config if not present
+                if 'grid' not in btn_cfg:
+                    btn_cfg['grid'] = {'row': current_row, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'}
+                    current_row += 1
+                
                 self.create_button(btn_frame, btn_cfg)
+                plugin_button_count += 1
+                logging.info(f"Created button: {btn_cfg.get('text')} for {plugin_name}")
+
+        logging.info(f"Completed loading {plugin_button_count} plugin buttons")
                
         # Other buttons
         other_buttons = [
@@ -763,7 +774,6 @@ class ImageOverlayApp:
 
     ##########################################################################################################
     ###                           --- User Image Loading and Saving Methods ---                             ###
-    ##########################################################################################################
 
     def load_user_image(self):
         """
