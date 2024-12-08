@@ -7,23 +7,17 @@ import logging
 import os
 import ctypes
 from ctypes import wintypes
-from pynput.mouse import Controller as MouseController
-from pynput.keyboard import Key
-import tkinter as tk
 
 class MaestroControlsPlugin(OrthyPlugin):
     def __init__(self):
+        self.app = None
         self.full_control_mode = False
         self.full_control_hotkey_listener = None
-        self.app = None
-        self.current_coords = {}
-        logging.debug("MaestroControlsPlugin initialized")
         self.maestro_version = None
         self.ghost_click_positions = {}
 
     def initialize(self, app_instance):
         self.app = app_instance
-        logging.debug("MaestroControlsPlugin initialized with app instance")
 
     def get_name(self):
         return "MaestroControls"
@@ -32,127 +26,96 @@ class MaestroControlsPlugin(OrthyPlugin):
         return [{
             'text': 'Maestro Controls',
             'command': self.toggle_full_control,
-            'variable_name': 'btn_maestro_controls',
-            'bg': '#a0ffa0' if self.full_control_mode else '#ffa0a0',
-            'relief': 'sunken' if self.full_control_mode else 'raised',
-            'width': 12
+            'grid': {'row': 18, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
+            'width': 10,
+            'variable_name': 'btn_full_control',
+            'bg': 'red',
+            'fg': 'white'
         }]
 
     def toggle_full_control(self):
-        self.full_control_mode = not self.full_control_mode
-        state = "Enabled" if self.full_control_mode else "Disabled"
-        logging.info(f"Full Control Mode {state} for Maestro 6")
-        if self.full_control_mode:
-            self.prompt_maestro_version_and_start()
-        else:
-            self.stop_full_control_hotkeys()
-            # Update button appearance
-            if self.app and 'btn_maestro_controls' in self.app.predefined_buttons:
-                btn = self.app.predefined_buttons['btn_maestro_controls']
-                btn.config(bg='#ffa0a0', relief='raised')
+        if not self.full_control_mode:
+            # Prompt the user to select Maestro version
+            maestro_version = self.prompt_maestro_version()
+            if maestro_version is None:
+                return
+            self.maestro_version = maestro_version
 
-    def prompt_maestro_version_and_start(self):
-        """Prompt user to select Maestro version and choose coordinate loading method."""
-        version = self.prompt_maestro_version()
-        if version:
-            self.maestro_version = version
-            # Ask user to reset coordinates manually or load defaults
-            choice = messagebox.askyesno(
-                "Coordinate Method",
-                "Do you want to reset the coordinates manually?\n\n"
-                "Yes: Reset coordinates manually\n"
-                "No: Load default coordinates"
+            # Simplified coordinate setup dialog
+            response = messagebox.askyesno(
+                "Coordinate Setup",
+                "How would you like to set up coordinates?\n\n" +
+                "Click 'Yes' to select coordinates manually\n" +
+                "Click 'No' to load coordinates from a file"
             )
-            if choice:
+            
+            if response:  # Manual selection
                 self.select_control_coordinates()
-            else:
-                if self.check_for_saved_coords():
-                    self.load_saved_coords()
-                else:
-                    messagebox.showwarning(
-                        "No Defaults Found",
-                        "Default coordinates not found. Please reset coordinates manually."
-                    )
-                    self.select_control_coordinates()
-            self.start_full_control_hotkeys()
-            # Update button appearance
-            if self.app and 'btn_maestro_controls' in self.app.predefined_buttons:
-                btn = self.app.predefined_buttons['btn_maestro_controls']
-                btn.config(bg='#a0ffa0', relief='sunken')
-        else:
-            logging.info("Maestro version selection canceled.")
-            self.full_control_mode = False
-            # Update button appearance
-            if self.app and 'btn_maestro_controls' in self.app.predefined_buttons:
-                btn = self.app.predefined_buttons['btn_maestro_controls']
-                btn.config(bg='#ffa0a0', relief='raised')
-
-    def load_coordinates(self):
-        """Load coordinates from file with proper error handling"""
-        try:
-            coord_file = f'coords_maestro_{self.maestro_version}.txt'
-            coord_path = os.path.join(self.app.base_dir, coord_file)
-            self.current_coords.clear()
-            
-            with open(coord_path, 'r') as f:
-                for line in f:
-                    try:
-                        # Strip whitespace and split by colon first
-                        parts = line.strip().split(':')
-                        if len(parts) != 2:
-                            logging.warning(f"Invalid line format: {line}")
-                            continue
-                        
-                        name, coords = parts
-                        # Now split coords by comma
-                        coord_parts = coords.split(',')
-                        if len(coord_parts) != 2:
-                            logging.warning(f"Invalid coordinate format for '{name}': {coords}")
-                            continue
-                        
-                        x_str, y_str = coord_parts
-                        x, y = int(x_str), int(y_str)
-                        self.current_coords[name] = (x, y)
-                    except ValueError as e:
-                        logging.warning(f"Invalid coordinate values in line: {line} - {e}")
-                        continue
-                
-            if not self.current_coords:
-                raise ValueError("No valid coordinates loaded")
-                
-            logging.info(f"Loaded {len(self.current_coords)} coordinates from {coord_file}")
-            
-        except Exception as e:
-            logging.error(f"Failed to load coordinates: {e}")
-            self.full_control_mode = False
-            if self.app and 'btn_maestro_controls' in self.app.predefined_buttons:
-                self.app.predefined_buttons['btn_maestro_controls'].config(
-                    bg='#ffa0a0',
-                    relief='raised'
+            else:  # Load from file
+                filepath = filedialog.askopenfilename(
+                    title="Select coordinates file",
+                    filetypes=[("Text files", "*.txt")],
+                    initialdir=self.app.base_dir
                 )
-            messagebox.showerror("Load Failed", f"Failed to load coordinates: {e}")
+                if filepath:
+                    self.load_coords_from_file(filepath)
+                else:
+                    return
+
+            self.full_control_mode = True
+            self.start_full_control_hotkeys()
+            logging.info(f"Full Control Mode Enabled for Maestro {self.maestro_version}")
+            
+            self.app.btn_full_control.config(
+                text="Full_Ctrl_ON",
+                bg='green',
+                fg='white'
+            )
+        else:
+            self.full_control_mode = False
+            self.stop_full_control_hotkeys()
+            logging.info("Full Control Mode Disabled")
+            
+            self.app.btn_full_control.config(
+                text="FullCtrl",
+                bg='red',
+                fg='white'
+            )
 
     def select_control_coordinates(self):
         """
         Guides the user to select coordinates for each control by clicking on the screen.
+        Updated control mappings:
+        - Backspace: MesialRotation
+        - Numpad *: DistalRotation
+        - Numpad 9: MesialTip
+        - Numpad 7: DistalTip
+        - Numpad /: BuccalLinear
+        - Numpad 2: LingualLinear
+        - Numpad 3: MesialLinear
+        - Numpad 1: DistalLinear
+        - Numpad .: Intrusion
+        - Numpad +: PositiveTorque
+        - Numpad -: NegativeTorque
         """
         controls = [
-            'DistalTip', 'MesialTip',
-            'NegativeTorque', 'PositiveTorque',
-            'MesialRotation', 'DistalRotation', 
+            'MesialRotation', 'DistalRotation',
+            'MesialTip', 'DistalTip',
             'BuccalLinear', 'LingualLinear',
             'MesialLinear', 'DistalLinear',
-            'Intrusion'
+            'Intrusion', 'PositiveTorque', 'NegativeTorque'
         ]
         self.ghost_click_positions = {}
 
-        messagebox.showinfo("Coordinate Selection",
+        messagebox.showinfo("Coordinate Selection", 
             "You'll be prompted to click on each control's position.\n\n"
             "Numpad Controls:\n"
-            "7 - Distal Tip       + - Positive Torque    9 - Mesial Tip\n"
-            "Backspace - Mesial Rotation    * - Distal Rotation\n" 
-            "/ - Buccal Linear    2 - Lingual Linear     3 - Mesial Linear\n"
-            "1 - Distal Linear    - - Negative Torque    0 - Intrusion"
+            "Bksp - Mesial Rotation    * - Distal Rotation\n"
+            "9 - Mesial Tip       7 - Distal Tip\n"
+            "/ - Buccal Linear    2 - Lingual Linear\n"
+            "3 - Mesial Linear    1 - Distal Linear\n"
+            ". - Intrusion        + - Positive Torque\n"
+            "- - Negative Torque"
         )
 
         for control in controls:
@@ -163,7 +126,7 @@ class MaestroControlsPlugin(OrthyPlugin):
             self.app.root.deiconify()
             self.app.image_window.deiconify()
 
-        save_coords = messagebox.askyesno("Save Coordinates",
+        save_coords = messagebox.askyesno("Save Coordinates", 
             "Do you want to save these coordinates for future use?"
         )
         if save_coords:
@@ -194,18 +157,18 @@ class MaestroControlsPlugin(OrthyPlugin):
         """
         Saves the ghost click positions to a file.
         Format:
-        ControlName:x,y
+        ControlName:X,Y
         """
         coords_file = os.path.join(self.app.base_dir, f'coords_maestro_{self.maestro_version}.txt')
         try:
             with open(coords_file, 'w') as f:
-                # Save in a specific order for readability
+                # Updated control order
                 control_order = [
-                    'DistalTip', 'MesialTip',
-                    'NegativeTorque', 'PositiveTorque',
                     'MesialRotation', 'DistalRotation',
-                    'Intrusion', 'Extrusion',
-                    'DistalLinear', 'MesialLinear'
+                    'MesialTip', 'DistalTip',
+                    'BuccalLinear', 'LingualLinear',
+                    'MesialLinear', 'DistalLinear',
+                    'Intrusion', 'PositiveTorque', 'NegativeTorque'
                 ]
                 for control in control_order:
                     if control in self.ghost_click_positions:
@@ -257,57 +220,95 @@ class MaestroControlsPlugin(OrthyPlugin):
         return os.path.exists(coords_file)
 
     def prompt_maestro_version(self):
-        """Prompt user to select Maestro version"""
-        dialog = tk.Toplevel()
-        dialog.title("Select Maestro Version")
-        dialog.geometry("300x100")
-        dialog.transient(self.app.root)
-        dialog.grab_set()
-        
-        def select_version(version):
-            self.maestro_version = version
-            dialog.destroy()
-            
-        btn_frame = tk.Frame(dialog)
-        btn_frame.pack(expand=True)
-        
-        tk.Button(btn_frame, text="Maestro 4", 
-                 command=lambda: select_version('4')).pack(side='left', padx=20)
-        tk.Button(btn_frame, text="Maestro 6",
-                 command=lambda: select_version('6')).pack(side='left', padx=20)
-                 
-        dialog.wait_window()
-        return self.maestro_version
+        """
+        Prompts user to select Maestro version.
+        """
+        maestro_version = None
 
-    def start_full_control_hotkeys(self):
-        """Initialize and start hotkey listeners for full control mode"""
+        def select_version(version):
+            nonlocal maestro_version
+            maestro_version = version
+            top.destroy()
+
+        top = Toplevel(self.app.root)
+        top.title("Select Maestro Version")
+        top.attributes('-topmost', True)
+        top.grab_set()
+
+        Label(top, text="Select Maestro Version:").pack(pady=10)
+
+        btn_frame = Frame(top)
+        btn_frame.pack(pady=10)
+
+        Button(btn_frame, text="Maestro 4", command=lambda: select_version('4')).pack(side='left', padx=20)
+        Button(btn_frame, text="Maestro 6", command=lambda: select_version('6')).pack(side='right', padx=20)
+
+        top.update_idletasks()
+        window_width = top.winfo_width()
+        window_height = top.winfo_height()
+        screen_width = top.winfo_screenwidth()
+        screen_height = top.winfo_screenheight()
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+        top.geometry(f'{window_width}x{window_height}+{x}+{y}')
+
+        top.wait_window()
+        return maestro_version
+
+    def start_full_control_hotkeys(self): # IF SOMEONE IS WORKING ON REMOTE DESKTOP, IT WILL NOT WORK, UNLESS YOU SELECT IN LOCAL RESOURCES, TO USE WIN COMBINATIONS ONLY FROM YOUR LOCAL COMPUTER... !GPT NEVER DELETE THIS COMMENT! EVER! EVER! 
+        """
+        Starts listening for keyboard shortcuts using virtual key codes.
+        VK codes:
+        8   - Backspace (MesialRotation)
+        106 - Numpad * (DistalRotation)
+        105 - Numpad 9 (MesialTip)
+        103 - Numpad 7 (DistalTip)
+        111 - Numpad / (BuccalLinear)
+        98  - Numpad 2 (LingualLinear)
+        99  - Numpad 3 (MesialLinear)
+        97  - Numpad 1 (DistalLinear)
+        110 - Numpad . (Intrusion)
+        107 - Numpad + (PositiveTorque)
+        109 - Numpad - (NegativeTorque)
+        """
         try:
-            # Stop existing listener if any
-            if self.full_control_hotkey_listener is not None:
-                if self.full_control_hotkey_listener.is_alive():
-                    self.full_control_hotkey_listener.stop()
-            # Create new listener
-            self.full_control_hotkey_listener = keyboard.Listener(
-                on_press=self.on_key_press,
-                on_release=self.on_key_release
-            )
+            vk_codes = {
+                110: 'MesialRotation',  # Changed from 8 to 110
+                106: 'DistalRotation',
+                105: 'MesialTip',
+                103: 'DistalTip',
+                111: 'BuccalLinear',
+                98: 'LingualLinear',
+                99: 'MesialLinear',
+                97: 'DistalLinear',
+                96: 'Intrusion',
+                107: 'PositiveTorque',
+                109: 'NegativeTorque'
+            }
+            def on_press(key):
+                try:
+                    vk = key.vk
+                    if vk in vk_codes:
+                        self.perform_ghost_click(vk_codes[vk])
+                except AttributeError:
+                    pass  # Key doesn't have a vk code
+
+            self.full_control_hotkey_listener = keyboard.Listener(on_press=on_press)
             self.full_control_hotkey_listener.daemon = True
             self.full_control_hotkey_listener.start()
-            logging.info("Full control hotkeys started")
+            logging.info("Full Control Hotkeys listener started")
         except Exception as e:
-            logging.error(f"Failed to start full control hotkeys: {e}")
-            self.full_control_mode = False
-            if self.app and 'btn_maestro_controls' in self.app.predefined_buttons:
-                btn = self.app.predefined_buttons['btn_maestro_controls']
-                btn.config(bg='#ffa0a0', relief='raised')
-            messagebox.showerror("Hotkey Error", f"Failed to start hotkeys: {e}")
+            logging.error(f"Failed to start Full Control Hotkeys: {e}")
+            messagebox.showerror("Hotkey Error", f"Failed to start Full Control Hotkeys: {e}")
 
     def stop_full_control_hotkeys(self):
-        """Stop and cleanup hotkey listeners"""
-        if self.full_control_hotkey_listener is not None:
+        """
+        Stops listening for keyboard shortcuts.
+        """
+        if self.full_control_hotkey_listener:
             self.full_control_hotkey_listener.stop()
             self.full_control_hotkey_listener = None
-            logging.info("Full control hotkeys stopped")
+            logging.info("Full Control Hotkeys listener stopped")
 
     def cleanup_listeners(self):
         """
@@ -379,7 +380,7 @@ class MaestroControlsPlugin(OrthyPlugin):
             dx=absolute_x,
             dy=absolute_y,
             mouseData=0,
-            dwFlags=0x0001 | 0x8000,  # MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE
+            dwFlags=0x0001 | 0x8000,
             time=0,
             dwExtraInfo=None
         )
@@ -390,7 +391,7 @@ class MaestroControlsPlugin(OrthyPlugin):
             dx=0,
             dy=0,
             mouseData=0,
-            dwFlags=0x0002,  # MOUSEEVENTF_LEFTDOWN
+            dwFlags=0x0002,
             time=0,
             dwExtraInfo=None
         )
@@ -401,13 +402,14 @@ class MaestroControlsPlugin(OrthyPlugin):
             dx=0,
             dy=0,
             mouseData=0,
-            dwFlags=0x0004,  # MOUSEEVENTF_LEFTUP
+            dwFlags=0x0004,
             time=0,
             dwExtraInfo=None
         )
 
         inputs = (mouse_move_input, mouse_down_input, mouse_up_input)
         nInputs = len(inputs)
+        LPINPUT = ctypes.POINTER(INPUT)
         pInputs = (INPUT * nInputs)(*inputs)
         cbSize = ctypes.sizeof(INPUT)
 
@@ -419,31 +421,3 @@ class MaestroControlsPlugin(OrthyPlugin):
         """
         if self.full_control_mode:
             self.cleanup_listeners()
-
-    def on_key_press(self, key):
-        """Handle key press events"""
-        try:
-            if key == keyboard.Key.f1:
-                self.perform_ghost_click('DistalTip')
-            elif key == keyboard.Key.f2:
-                self.perform_ghost_click('MesialTip')
-            # Add more key mappings as needed
-            logging.debug(f"Key pressed: {key}")
-        except Exception as e:
-            logging.error(f"Error in on_key_press: {e}")
-
-    def on_key_release(self, key):
-        """Handle keyboard release events"""
-        try:
-            if key == Key.esc:
-                self.full_control_mode = False
-                if self.full_control_hotkey_listener:
-                    self.full_control_hotkey_listener.stop()
-                logging.info("Full control mode disabled")
-                # Update button appearance
-                if self.app and 'btn_maestro_controls' in self.app.predefined_buttons:
-                    btn = self.app.predefined_buttons['btn_maestro_controls']
-                    btn.config(bg='#ffa0a0', relief='raised')
-                return False
-        except Exception as e:
-            logging.error(f"Error in key release handler: {e}")
