@@ -17,6 +17,7 @@ from pynput.keyboard import Key
 import logging
 from logging import Handler
 import tkinter as tk
+from  core.plugin_loader import PluginLoader # Import the PluginLoader class from the core.plugin_loader module
 
 # Configure the logger
 logging.basicConfig(
@@ -97,11 +98,17 @@ class ImageOverlayApp:
     Main application class that handles image loading, transformations,
     and user interactions through the GUI.
     """
-
+    
+     
     def __init__(self, root):
         self.root = root
         self.root.title("Controls")
-        self.image_window_visible = False  # Start with the image window hidden
+        self.image_window_visible = False
+
+        # Initialize plugin system before GUI setup
+        from core.plugin_loader import PluginLoader
+        self.plugin_loader = PluginLoader()
+        self.plugin_loader.load_plugins(self)
 
         # Set the default size and position of the root window
         self.set_root_window_geometry()
@@ -111,6 +118,9 @@ class ImageOverlayApp:
 
         # Path to the Images directory
         self.images_dir = os.path.join(self.base_dir, 'Images', 'ArchSaves')
+
+        # In ImageOverlayApp.__init__, add dictionary for button references
+        self.predefined_buttons = {}
 
         # Dictionary to store ImageState objects
         self.images = {}
@@ -144,6 +154,10 @@ class ImageOverlayApp:
             'PositiveTorque': (200, 300),
             'MesialTip': (250, 350),
         }
+
+        #initialize the plugin system
+        self.plugin_loader = PluginLoader()
+        self.plugin_loader.load_plugins(self)
 
         # Initialize the GUI
         self.setup_buttons_window()
@@ -252,6 +266,11 @@ class ImageOverlayApp:
         self.create_active_image_control(btn_frame)
         self.create_predefined_image_buttons(btn_frame)
 
+        # Plugin buttons
+        for plugin in self.plugin_loader.plugins.values():
+            for btn_cfg in plugin.get_buttons():
+                self.create_button(btn_frame, btn_cfg)
+               
         # Other buttons
         other_buttons = [
             {
@@ -259,15 +278,6 @@ class ImageOverlayApp:
                 'command': self.load_user_image,
                 'grid': {'row': 17, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
                 'width': 10
-            },
-            {
-                'text': 'FullCtrl',
-                'command': self.toggle_full_control,
-                'grid': {'row': 18, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'}, # Adjusted row
-                'width': 10,
-                'variable_name': 'btn_full_control',
-                'bg': 'red', # Initial state is inactive
-                'fg': 'white'
             },
             {
                 'text': 'Ctrl Mode',
@@ -441,7 +451,8 @@ class ImageOverlayApp:
                 'text': label,
                 'command': command,
                 'grid': {'row': start_row + idx, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
-                'width': 10
+                'width': 10,
+                'variable_name': f'btn_{label.lower().replace(" ", "_")}'
             }
             self.create_button(parent, btn_cfg)
 
@@ -1280,400 +1291,44 @@ class ImageOverlayApp:
         self.draw_images()
 
     ##########################################################################################################
-    ###                          --- Full Control Mode Methods ---                                          ###
-    ##########################################################################################################
-
-    def toggle_full_control(self):
-        """
-        Toggles the full control mode for the application.
-        This method handles the activation and deactivation of the full control mode.
-        When activated, it prompts for Maestro version selection and configures hotkeys.
-        When deactivated, it stops the hotkeys and resets the control mode.
-        """
-        if not self.full_control_mode:
-            # Prompt the user to select Maestro version
-            maestro_version = self.prompt_maestro_version()
-            if maestro_version is None:
-                # User cancelled the selection
-                return
-            self.maestro_version = maestro_version
-
-            # Check if coordinates file exists for this version
-            if self.check_for_saved_coords():
-                # Ask user if they want to use existing coordinates or reset
-                response = messagebox.askyesno(
-                    "Existing Coordinates",
-                    "Coordinates file found. Do you want to use existing coordinates?\n\n" +
-                    "Click 'Yes' to use existing coordinates\n" +
-                    "Click 'No' to select new coordinates"
-                )
-                if response:
-                    # Ask if user wants to load from default or choose file
-                    load_choice = messagebox.askyesno(
-                        "Load Coordinates",
-                        "Would you like to:\n\n" +
-                        "Click 'Yes' to load default coordinates\n" +
-                        "Click 'No' to choose a coordinates file"
-                    )
-                    if load_choice:
-                        # Load default coordinates
-                        self.load_saved_coords()
-                    else:
-                        # Let user choose a file
-                        filepath = filedialog.askopenfilename(
-                            title="Select coordinates file",
-                            filetypes=[("Text files", "*.txt")],
-                            initialdir=self.base_dir
-                        )
-                        if filepath:
-                            self.load_coords_from_file(filepath)
-                else:
-                    # Reset coordinates by selecting new ones
-                    self.select_control_coordinates()
-            else:
-                # No existing coordinates, ask if user wants to select or load from file
-                response = messagebox.askyesnocancel(
-                    "Coordinate Setup",
-                    "No saved coordinates found. Would you like to:\n\n" +
-                    "Click 'Yes' to select new coordinates\n" +
-                    "Click 'No' to load coordinates from a file\n" +
-                    "Click 'Cancel' to abort"
-                )
-                if response is True:
-                    # Select new coordinates
-                    self.select_control_coordinates()
-                elif response is False:
-                    # Load coordinates from file
-                    filepath = filedialog.askopenfilename(
-                        title="Select coordinates file",
-                        filetypes=[("Text files", "*.txt")],
-                        initialdir=self.base_dir
-                    )
-                    if filepath:
-                        self.load_coords_from_file(filepath)
-                    else:
-                        return
-                else:
-                    # User cancelled
-                    return
-
-            # Activate full control mode and update button appearance
-            self.full_control_mode = True
-            self.start_full_control_hotkeys()
-            logging.info(f"Full Control Mode Enabled for Maestro {self.maestro_version}.")
-                
-            # Update button text and color for active state
-            self.btn_full_control.config(
-                text="Full_Ctrl_ON",
-                bg='green',  # Set background to green when active
-                fg='white'   # Set text color to white for better contrast
-            )
-        else:
-            # Deactivate full control mode
-            self.full_control_mode = False
-            self.stop_full_control_hotkeys()
-            logging.info("Full Control Mode Disabled.")
-            
-            # Update button text and color for inactive state
-            self.btn_full_control.config(
-                text="FullCtrl",
-                bg='red',    # Set background to red when inactive
-                fg='white'   # Set text color to white for better contrast
-            )
-
-    def select_control_coordinates(self):
-        """
-        Guides the user to select coordinates for each control by clicking on the screen.
-        """
-        controls = ['DistalTip', 'MesialTip', 'NegativeTorque', 'PositiveTorque', 'MesialRotation', 'DistalRotation']
-        self.ghost_click_positions = {}
-
-        messagebox.showinfo("Coordinate Selection", "You'll be prompted to click on each control's position.")
-
-        for control in controls:
-            messagebox.showinfo("Select Control", f"Please click on the '{control}' control on the screen.")
-            # Hide the root window to allow clicking on other windows
-            self.root.withdraw()
-            self.image_window.withdraw()
-            self.wait_for_click(control)
-            # Show the root window again
-            self.root.deiconify()
-            self.image_window.deiconify()
-
-        # Ask if the user wants to save the coordinates
-        save_coords = messagebox.askyesno("Save Coordinates", "Do you want to save these coordinates for future use?")
-        if save_coords:
-            self.save_coords_to_file()
-
-    def wait_for_click(self, control_name):
-        """
-        Waits for the user to click on the screen and records the cursor position.
-        """
-        messagebox.showinfo("Coordinate Selection", f"Move your mouse to the '{control_name}' control and click.")
-
-        # Wait for the left mouse button click
-        position = None
-
-        def on_click(x, y, button, pressed):
-            nonlocal position
-            if pressed and button == mouse.Button.left:
-                position = (x, y)
-                return False  # Stop listener
-
-        with mouse.Listener(on_click=on_click) as listener:
-            listener.join()
-
-        if position:
-            self.ghost_click_positions[control_name] = position
-            logging.info(f"Recorded position for '{control_name}': {position}")
-
-    def save_coords_to_file(self):
-        """
-        Saves the ghost click positions to a file in the base directory.
-        """
-        coords_file = os.path.join(self.base_dir, f'coords_maestro_{self.maestro_version}.txt')
-        try:
-            with open(coords_file, 'w') as f:
-                for control, position in self.ghost_click_positions.items():
-                    f.write(f"{control}:{position[0]},{position[1]}\n")
-            logging.info(f"Coordinates saved to {coords_file}.")
-            messagebox.showinfo("Coordinates Saved", f"Coordinates saved to {coords_file}.")
-        except Exception as e:
-            logging.error(f"Failed to save coordinates: {e}")
-            messagebox.showerror("Save Failed", "Failed to save coordinates.")
-
-    def load_saved_coords(self):
-        """
-        Loads the ghost click positions from a file in the base directory.
-        """
-        coords_file = os.path.join(self.base_dir, f'coords_maestro_{self.maestro_version}.txt')
-        try:
-            with open(coords_file, 'r') as f:
-                for line in f:
-                    control, pos = line.strip().split(':')
-                    x_str, y_str = pos.split(',')
-                    self.ghost_click_positions[control] = (int(x_str), int(y_str))
-            logging.info(f"Coordinates loaded from {coords_file}.")
-        except Exception as e:
-            logging.error(f"Failed to load coordinates: {e}")
-            messagebox.showerror("Load Failed", "Failed to load coordinates.")
-
-    def check_for_saved_coords(self):
-        """
-        Checks if saved coordinates file exists for the selected Maestro version.
-        """
-        coords_file = os.path.join(self.base_dir, f'coords_maestro_{self.maestro_version}.txt')
-        return os.path.exists(coords_file)
-
-    def prompt_maestro_version(self):
-        """
-        Prompts the user to select Maestro version 4 or 6.
-        Returns '4' or '6' based on the selection.
-        """
-        maestro_version = None
-
-        def select_version(version):
-            nonlocal maestro_version
-            maestro_version = version
-            top.destroy()
-
-        # Create a new top-level window
-        top = tk.Toplevel(self.root)
-        top.title("Select Maestro Version")
-        top.attributes('-topmost', True)
-        top.grab_set()
-
-        # Create the content
-        tk.Label(top, text="Select Maestro Version:").pack(pady=10)
-
-        # Create a frame to hold the buttons
-        btn_frame = tk.Frame(top)
-        btn_frame.pack(pady=10)
-
-        # Buttons for Maestro versions
-        btn_maestro4 = tk.Button(btn_frame, text="Maestro 4", command=lambda: select_version('4'))
-        btn_maestro4.pack(side='left', padx=20)
-
-        btn_maestro6 = tk.Button(btn_frame, text="Maestro 6", command=lambda: select_version('6'))
-        btn_maestro6.pack(side='right', padx=20)
-
-        # Center the popup window
-        top.update_idletasks()  # Update "requested size" from geometry manager
-
-        # Get the window dimensions
-        window_width = top.winfo_width()
-        window_height = top.winfo_height()
-
-        # Get the screen dimensions
-        screen_width = top.winfo_screenwidth()
-        screen_height = top.winfo_screenheight()
-
-        # Calculate the position coordinates
-        x = (screen_width // 2) - (window_width // 2)
-        y = (screen_height // 2) - (window_height // 2)
-
-        # Set the geometry of the window
-        top.geometry(f'{window_width}x{window_height}+{x}+{y}')
-
-        # Wait for the window to be closed
-        top.wait_window()
-
-        return maestro_version
-
-    def start_full_control_hotkeys(self): # IF SOMEONE IS WORKING ON REMOTE DESKTOP, IT WILL NOT WORK, UNLESS YOU SELECT IN LOCAL RESOURCES, TO USE WIN COMBINATIONS ONLY FROM YOUR LOCAL COMPUTER... !GPT NEVER DELETE THIS COMMENT! EVER! EVER! 
-        """
-        Starts listening for the full control keyboard shortcuts using Alt+Ctrl as the modifiers.
-        """
-        # Map key combinations to their corresponding action names
-        key_combinations = {
-            '<alt>+<ctrl>+a': 'DistalTip',
-            '<alt>+<ctrl>+q': 'NegativeTorque',
-            '<alt>+<ctrl>+w': 'PositiveTorque',
-            '<alt>+<ctrl>+s': 'MesialTip',
-            '<alt>+<ctrl>+x': 'MesialRotation',
-            '<alt>+<ctrl>+z': 'DistalRotation',
-        }
-
-        # Create a dictionary for hotkeys and their corresponding callbacks
-        hotkeys = {}
-
-        for key_combination, action_name in key_combinations.items():
-            # Use default arguments to bind the current action_name
-            hotkeys[key_combination] = lambda a=action_name: self.perform_ghost_click(a)
-
-        try:
-            # Start the keyboard listener for full control mode using GlobalHotKeys
-            self.full_control_hotkey_listener = keyboard.GlobalHotKeys(hotkeys)
-            self.full_control_hotkey_listener.daemon = True  # Run in daemon thread
-            self.full_control_hotkey_listener.start()
-            logging.info("Full Control Hotkeys listener started with Alt+Ctrl as the modifiers.")
-        except ValueError as ve:
-            logging.error(f"Failed to start Full Control Hotkeys: {ve}")
-            messagebox.showerror("Hotkey Error", f"Failed to start Full Control Hotkeys: {ve}")
-
-    def stop_full_control_hotkeys(self):
-        """
-        Stops listening for the full control keyboard shortcuts.
-        """
-        if self.full_control_hotkey_listener is not None:
-            self.full_control_hotkey_listener.stop()
-            self.full_control_hotkey_listener = None
-            logging.info("Full Control Hotkeys listener stopped.")
-
-    def perform_ghost_click(self, action_name):
-        """
-        Performs a ghost click at the specified position for the given action.
-        """
-        position = self.ghost_click_positions.get(action_name)
-        if position is None:
-            logging.error(f"No position defined for action '{action_name}'.")
-            return
-
-        logging.info(f"Performing ghost click for '{action_name}' at position {position}.")
-        # Perform the ghost click at the position
-        self.ghost_click_at_position(position)
-
-    def ghost_click_at_position(self, position):
-        """
-        Simulates a mouse click at the specified screen position without moving the cursor.
-        """
-        x, y = position
-
-        # Prepare the input structures
-        INPUT_MOUSE = 0
-
-        class MOUSEINPUT(ctypes.Structure):
-            _fields_ = [
-                ("dx", ctypes.c_long),
-                ("dy", ctypes.c_long),
-                ("mouseData", ctypes.c_ulong),
-                ("dwFlags", ctypes.c_ulong),
-                ("time", ctypes.c_ulong),
-                ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong))
-            ]
-
-        class INPUT(ctypes.Structure):
-            _fields_ = [
-                ("type", ctypes.c_ulong),
-                ("mi", MOUSEINPUT)
-            ]
-
-        # Calculate absolute coordinates (0 to 65535)
-        screen_width = ctypes.windll.user32.GetSystemMetrics(0)
-        screen_height = ctypes.windll.user32.GetSystemMetrics(1)
-
-        absolute_x = int(x * 65536 / screen_width)
-        absolute_y = int(y * 65536 / screen_height)
-
-        # Mouse move event to the position (without moving the actual cursor)
-        mouse_move_input = INPUT()
-        mouse_move_input.type = INPUT_MOUSE
-        mouse_move_input.mi = MOUSEINPUT(
-            dx=absolute_x,
-            dy=absolute_y,
-            mouseData=0,
-            dwFlags=0x0001 | 0x8000,  # MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE
-            time=0,
-            dwExtraInfo=None
-        )
-
-        # Mouse left button down event
-        mouse_down_input = INPUT()
-        mouse_down_input.type = INPUT_MOUSE
-        mouse_down_input.mi = MOUSEINPUT(
-            dx=0,
-            dy=0,
-            mouseData=0,
-            dwFlags=0x0002,  # MOUSEEVENTF_LEFTDOWN
-            time=0,
-            dwExtraInfo=None
-        )
-
-        # Mouse left button up event
-        mouse_up_input = INPUT()
-        mouse_up_input.type = INPUT_MOUSE
-        mouse_up_input.mi = MOUSEINPUT(
-            dx=0,
-            dy=0,
-            mouseData=0,
-            dwFlags=0x0004,  # MOUSEEVENTF_LEFTUP
-            time=0,
-            dwExtraInfo=None
-        )
-
-        # Combine inputs
-        inputs = (mouse_move_input, mouse_down_input, mouse_up_input)
-        nInputs = len(inputs)
-        LPINPUT = ctypes.POINTER(INPUT)
-        pInputs = (INPUT * nInputs)(*inputs)
-        cbSize = ctypes.sizeof(INPUT)
-
-        # Send the inputs
-        ctypes.windll.user32.SendInput(nInputs, pInputs, cbSize)
-
-
-    ##########################################################################################################
     ###                          --- Application Exit Method ---                                            ###
     ##########################################################################################################
 
     def on_close(self):
         """
-        Handles the closing of the application.
+        Handles the closing of the application and ensures proper cleanup.
         """
-        # Close all additional windows
-        for window in self.additional_windows:
-            window.destroy()
-        # Stop control mode if active
-        if self.control_mode:
-            self.stop_global_key_capture()
-        # Stop full control mode if active
-        if self.full_control_mode:
-            self.stop_full_control_hotkeys()
-        # Stop global hotkey listener
-        if hasattr(self, 'global_hotkey_listener'):
-            self.global_hotkey_listener.stop()
-        self.root.destroy()
-        sys.exit(0)
+        try:
+            # Clean up plugins
+            if hasattr(self, 'plugin_loader'):
+                self.plugin_loader.cleanup()
+
+            # Clean up windows
+            if hasattr(self, 'image_window'):
+                self.image_window.destroy()
+            for window in self.additional_windows:
+                if window.winfo_exists():
+                    window.destroy()
+
+            # Stop listeners
+            if self.control_mode:
+                self.stop_global_key_capture()
+            if hasattr(self, 'full_control_mode') and self.full_control_mode:
+                self.stop_full_control_hotkeys()
+            if hasattr(self, 'global_hotkey_listener'):
+                self.global_hotkey_listener.stop()
+
+            # Clear image references
+            if hasattr(self, 'images'):
+                self.images.clear()
+
+            # Destroy main window
+            if self.root.winfo_exists():
+                self.root.destroy()
+        except Exception as e:
+            logging.error(f"Error during application cleanup: {e}")
+        finally:
+            sys.exit(0)
 
     ##########################################################################################################
     ###                                             --- Helper Methods ---                                  ###
@@ -1820,21 +1475,7 @@ class ImageOverlayApp:
             logging.error(f"Error getting transformed image: {e}")
             return None
 
-    def load_coords_from_file(self, filepath):
-        """
-        Loads the ghost click positions from a specified file.
-        """
-        try:
-            with open(filepath, 'r') as f:
-                self.ghost_click_positions.clear()
-                for line in f:
-                    control, pos = line.strip().split(':')
-                    x_str, y_str = pos.split(',')
-                    self.ghost_click_positions[control] = (int(x_str), int(y_str))
-            logging.info(f"Coordinates loaded from {filepath}.")
-        except Exception as e:
-            logging.error(f"Failed to load coordinates from file: {e}")
-            messagebox.showerror("Load Failed", "Failed to load coordinates from the selected file.")
+
 
     ##########################################################################################################
     ###                          --- Image Window Toggle Method ---                                         ###
