@@ -113,8 +113,8 @@ class ImageOverlayApp:
 
         # Set the default size and position of the root window
         self.set_root_window_geometry()
-
         # Determine the base directory (where the .py or .exe file is located)
+
         self.base_dir = get_base_dir()
 
         # Path to the Images directory
@@ -214,25 +214,35 @@ class ImageOverlayApp:
         """
         Sets up global keyboard shortcuts using pynput.
         """
+        logging.info("Initializing global hotkeys...")
+
         # Ctrl + Alt + 1 to start/stop Control Mode
         def toggle_control_mode_hotkey():
+            logging.info("Global hotkey: Ctrl+Alt+1 pressed. Toggling control mode.")
             self.root.after(0, lambda: self.toggle_control_mode())
+
         # Ctrl + Alt + 2 to show/hide the image window
         def toggle_image_window_hotkey():
+            logging.info("Global hotkey: Ctrl+Alt+2 pressed. Toggling image window visibility.")
             self.root.after(0, self.toggle_image_window)
-        # Ctrl + Alt + 3 to toggle Full Control mode
+
+        # Ctrl + Alt + 3 to toggle Full Control mode (either stop if active or resume if inactive)
         def toggle_full_control_hotkey():
-            self.root.after(0, self.toggle_full_control)
+            logging.info("Global hotkey: Ctrl+Alt+3 pressed. Toggling full control mode.")
+            self.root.after(0, self.toggle_full_control_mode_from_hotkey)
+
         try:
             self.global_hotkey_listener = keyboard.GlobalHotKeys({
                 '<ctrl>+<alt>+1': toggle_control_mode_hotkey,
                 '<ctrl>+<alt>+2': toggle_image_window_hotkey,
+                '<ctrl>+<alt>+3': toggle_full_control_hotkey
             })
             self.global_hotkey_listener.start()
-            logging.info("Global Hotkeys listener started.")
+            logging.info("Global Hotkeys listener started successfully.")
         except ValueError as ve:
             logging.error(f"Failed to start Global Hotkeys: {ve}")
             messagebox.showerror("Hotkey Error", f"Failed to start hotkeys: {ve}")
+
 
     ##########################################################################################################
     ###                          --- GUI Control Creation Methods ---                                       ###
@@ -1485,7 +1495,21 @@ class ImageOverlayApp:
             logging.error(f"Error getting transformed image: {e}")
             return None
 
-
+    def toggle_full_control_mode_from_hotkey(self):
+        """
+        Toggles the full control mode by interacting with the MaestroControls plugin.
+        If full control is active, this will disable it. If it's inactive, this will enable it.
+        """
+        mc_plugin = self.plugin_loader.get_plugin('MaestroControls')
+        if mc_plugin and hasattr(mc_plugin, 'toggle_full_control'):
+            current_state = mc_plugin.full_control_mode
+            logging.info(f"Current Full Control Mode: {'ON' if current_state else 'OFF'} - toggling now.")
+            mc_plugin.toggle_full_control()
+            # After toggling, log the new state
+            new_state = mc_plugin.full_control_mode
+            logging.info(f"New Full Control Mode: {'ON' if new_state else 'OFF'}")
+        else:
+            logging.warning("MaestroControls plugin not found or missing toggle_full_control method.")
 
     ##########################################################################################################
     ###                          --- Image Window Toggle Method ---                                         ###
