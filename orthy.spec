@@ -1,25 +1,30 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+block_cipher = None
 
 a = Analysis(
     ['orthy.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\User\\Desktop\\Python\\OrthyTest\\OrthyApp\\Images', 'Images')],
-    hiddenimports=[],
+    datas=[('Images', 'Images')],  # Include Images folder
+    hiddenimports=['PIL._tkinter_finder'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
     noarchive=False,
-    optimize=0,
 )
-pyz = PYZ(a.pure)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
+    a.zipfiles,
     a.datas,
     [],
     name='orthy',
@@ -35,5 +40,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['smiley.ico'],
+    icon='Images/icon.ico',  # Optional: add an icon if you have one
 )

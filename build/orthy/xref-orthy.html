@@ -31,6 +31,7 @@ imports:
  &#8226;   <a href="#collections">collections</a>
  &#8226;   <a href="#collections.abc">collections.abc</a>
  &#8226;   <a href="#copyreg">copyreg</a>
+ &#8226;   <a href="#core.plugin_loader">core.plugin_loader</a>
  &#8226;   <a href="#ctypes">ctypes</a>
  &#8226;   <a href="#ctypes.wintypes">ctypes.wintypes</a>
  &#8226;   <a href="#datetime">datetime</a>
@@ -160,6 +161,7 @@ imports:
  &#8226;   <a href="#functools">functools</a>
  &#8226;   <a href="#genericpath">genericpath</a>
  &#8226;   <a href="#heapq">heapq</a>
+ &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#io">io</a>
  &#8226;   <a href="#keyword">keyword</a>
  &#8226;   <a href="#linecache">linecache</a>
@@ -171,6 +173,7 @@ imports:
  &#8226;   <a href="#ntpath">ntpath</a>
  &#8226;   <a href="#operator">operator</a>
  &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#plugins.key_remap">plugins.key_remap</a>
  &#8226;   <a href="#posixpath">posixpath</a>
  &#8226;   <a href="#pyi_rth__tkinter.py">pyi_rth__tkinter.py</a>
  &#8226;   <a href="#pyi_rth_inspect.py">pyi_rth_inspect.py</a>
@@ -4182,6 +4185,7 @@ imported by:
  &#8226;   <a href="#PIL.ImageShow">PIL.ImageShow</a>
  &#8226;   <a href="#_collections_abc">_collections_abc</a>
  &#8226;   <a href="#contextlib">contextlib</a>
+ &#8226;   <a href="#core.plugin_interface">core.plugin_interface</a>
  &#8226;   <a href="#dataclasses">dataclasses</a>
  &#8226;   <a href="#email._policybase">email._policybase</a>
  &#8226;   <a href="#functools">functools</a>
@@ -7191,6 +7195,56 @@ imported by:
  &#8226;   <a href="#pickle">pickle</a>
  &#8226;   <a href="#re">re</a>
  &#8226;   <a href="#typing">typing</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="core"></a>
+  <a target="code" href="-" type="text/plain"><tt>core</tt></a>
+<span class="moduletype">NamespacePackage</span>  <div class="import">
+imported by:
+    <a href="#core.plugin_interface">core.plugin_interface</a>
+ &#8226;   <a href="#core.plugin_loader">core.plugin_loader</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="core.plugin_interface"></a>
+  <a target="code" href="///C:/Users/User/Desktop/Python/OrthyApp/core/plugin_interface.py" type="text/plain"><tt>core.plugin_interface</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#abc">abc</a>
+ &#8226;   <a href="#core">core</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#core.plugin_loader">core.plugin_loader</a>
+ &#8226;   <a href="#plugins.key_remap">plugins.key_remap</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="core.plugin_loader"></a>
+  <a target="code" href="///C:/Users/User/Desktop/Python/OrthyApp/core/plugin_loader.py" type="text/plain"><tt>core.plugin_loader</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#core">core</a>
+ &#8226;   <a href="#core.plugin_interface">core.plugin_interface</a>
+ &#8226;   <a href="#importlib">importlib</a>
+ &#8226;   <a href="#inspect">inspect</a>
+ &#8226;   <a href="#os">os</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#orthy.py">orthy.py</a>
 
   </div>
 
@@ -11734,6 +11788,7 @@ imports:
 imported by:
     <a href="#_distutils_hack">_distutils_hack</a>
  &#8226;   <a href="#cffi._imp_emulation">cffi._imp_emulation</a>
+ &#8226;   <a href="#core.plugin_loader">core.plugin_loader</a>
  &#8226;   <a href="#defusedxml.ElementTree">defusedxml.ElementTree</a>
  &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#importlib._abc">importlib._abc</a>
@@ -11747,6 +11802,7 @@ imported by:
  &#8226;   <a href="#importlib.resources._common">importlib.resources._common</a>
  &#8226;   <a href="#importlib.util">importlib.util</a>
  &#8226;   <a href="#inspect">inspect</a>
+ &#8226;   <a href="#orthy.py">orthy.py</a>
  &#8226;   <a href="#pkg_resources">pkg_resources</a>
  &#8226;   <a href="#pkgutil">pkgutil</a>
  &#8226;   <a href="#pynput._util">pynput._util</a>
@@ -12328,6 +12384,7 @@ imported by:
  &#8226;   <a href="#asyncio.format_helpers">asyncio.format_helpers</a>
  &#8226;   <a href="#asyncio.tasks">asyncio.tasks</a>
  &#8226;   <a href="#bdb">bdb</a>
+ &#8226;   <a href="#core.plugin_loader">core.plugin_loader</a>
  &#8226;   <a href="#dataclasses">dataclasses</a>
  &#8226;   <a href="#doctest">doctest</a>
  &#8226;   <a href="#importlib.metadata">importlib.metadata</a>
@@ -12862,6 +12919,7 @@ imported by:
  &#8226;   <a href="#multiprocessing.util">multiprocessing.util</a>
  &#8226;   <a href="#orthy.py">orthy.py</a>
  &#8226;   <a href="#packaging.tags">packaging.tags</a>
+ &#8226;   <a href="#plugins.key_remap">plugins.key_remap</a>
  &#8226;   <a href="#pynput">pynput</a>
  &#8226;   <a href="#setuptools._distutils._log">setuptools._distutils._log</a>
  &#8226;   <a href="#setuptools._distutils.cmd">setuptools._distutils.cmd</a>
@@ -14757,6 +14815,7 @@ imported by:
  &#8226;   <a href="#concurrent.futures.thread">concurrent.futures.thread</a>
  &#8226;   <a href="#configparser">configparser</a>
  &#8226;   <a href="#contextlib">contextlib</a>
+ &#8226;   <a href="#core.plugin_loader">core.plugin_loader</a>
  &#8226;   <a href="#ctypes">ctypes</a>
  &#8226;   <a href="#ctypes._aix">ctypes._aix</a>
  &#8226;   <a href="#ctypes.macholib.dyld">ctypes.macholib.dyld</a>
@@ -15778,6 +15837,37 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="plugins"></a>
+  <a target="code" href="-" type="text/plain"><tt>plugins</tt></a>
+<span class="moduletype">NamespacePackage</span>  <div class="import">
+imported by:
+    <a href="#plugins.key_remap">plugins.key_remap</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="plugins.key_remap"></a>
+  <a target="code" href="///C:/Users/User/Desktop/Python/OrthyApp/plugins/key_remap.py" type="text/plain"><tt>plugins.key_remap</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#core.plugin_interface">core.plugin_interface</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#plugins">plugins</a>
+ &#8226;   <a href="#pynput">pynput</a>
+ &#8226;   <a href="#pynput.keyboard">pynput.keyboard</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#orthy.py">orthy.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="posix"></a>
   <a target="code" href="" type="text/plain"><tt>posix</tt></a>
 <span class="moduletype">MissingModule</span>  <div class="import">
@@ -16270,6 +16360,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#orthy.py">orthy.py</a>
+ &#8226;   <a href="#plugins.key_remap">plugins.key_remap</a>
  &#8226;   <a href="#pynput">pynput</a>
  &#8226;   <a href="#pynput._info">pynput._info</a>
  &#8226;   <a href="#pynput._util">pynput._util</a>
@@ -16506,6 +16597,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#orthy.py">orthy.py</a>
+ &#8226;   <a href="#plugins.key_remap">plugins.key_remap</a>
  &#8226;   <a href="#pynput">pynput</a>
  &#8226;   <a href="#pynput.keyboard">pynput.keyboard</a>
  &#8226;   <a href="#pynput.keyboard._base">pynput.keyboard._base</a>
