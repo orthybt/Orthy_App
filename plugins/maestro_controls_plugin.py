@@ -266,53 +266,46 @@ class MaestroControlsPlugin(OrthyPlugin):
                     # Track modifier keys
                     if key == Key.alt_l or key == Key.alt_r:
                         self.alt_pressed = True
-                        return
+                        return True
                     if key == Key.ctrl_l or key == Key.ctrl_r:
                         self.ctrl_pressed = True
-                        return
+                        return True
 
-                    # Add key to pressed set
-                    self.pressed_keys.add(key)
-
-                    # Only process if Alt is pressed
-                    if not self.alt_pressed:
-                        return
-
-                    # Handle key combinations
-                    if self.ctrl_pressed:
-                        # Alt + Ctrl combinations
-                        if hasattr(key, 'char') and key.char == 'w':
-                            logging.debug("Alt+Ctrl+W pressed")
-                            self.perform_ghost_click('BuccalLinear')
-                        elif key == Key.down:
-                            logging.debug("Alt+Ctrl+Down pressed")
-                            self.perform_ghost_click('LingualLinear')
-                    else:
-                        # Alt only combinations
-                        if key == Key.up:
-                            self.perform_ghost_click('PositiveTorque')
-                        elif key == Key.down:
-                            self.perform_ghost_click('NegativeTorque')
-                        elif hasattr(key, 'char'):
-                            key_actions = {
-                                'e': 'MesialTip',
-                                'q': 'DistalTip',
-                                'z': 'DistalRotation',
-                                'c': 'MesialRotation',
-                                'x': 'Intrusion'
-                            }
-                            if key.char in key_actions:
-                                logging.debug(f"Alt+{key.char} pressed")
-                                self.perform_ghost_click(key_actions[key.char])
-                        elif key == Key.right:
-                            self.perform_ghost_click('MesialLinear')
-                        elif key == Key.left:
-                            self.perform_ghost_click('DistalLinear')
+                    # Process Alt combinations
+                    if self.alt_pressed:
+                        if self.ctrl_pressed:
+                            # Alt + Ctrl combinations
+                            if hasattr(key, 'char') and key.char == 'w':
+                                self.perform_ghost_click('BuccalLinear')
+                            elif key == Key.down:
+                                self.perform_ghost_click('LingualLinear')
+                        else:
+                            # Alt only combinations
+                            if key == Key.up:
+                                self.perform_ghost_click('PositiveTorque')
+                            elif key == Key.down:
+                                self.perform_ghost_click('NegativeTorque')
+                            elif hasattr(key, 'char'):
+                                key_actions = {
+                                    'e': 'MesialTip',
+                                    'q': 'DistalTip',
+                                    'z': 'DistalRotation',
+                                    'c': 'MesialRotation',
+                                    'x': 'Intrusion'
+                                }
+                                if key.char in key_actions:
+                                    self.perform_ghost_click(key_actions[key.char])
+                            elif key == Key.right:
+                                self.perform_ghost_click('MesialLinear')
+                            elif key == Key.left:
+                                self.perform_ghost_click('DistalLinear')
+                    
+                    # Always allow event propagation
+                    return True
 
                 except AttributeError as e:
                     logging.debug(f"Key attribute error: {e}")
-                except Exception as e:
-                    logging.error(f"Error in key handler: {e}")
+                    return True
 
             def on_release(key):
                 try:
@@ -324,12 +317,15 @@ class MaestroControlsPlugin(OrthyPlugin):
                         self.alt_pressed = False
                     elif key in (Key.ctrl_l, Key.ctrl_r):
                         self.ctrl_pressed = False
-                        
+                    
                     logging.debug(f"Key released: {key}")
+                    return True  # Allow event to propagate
+                    
                 except Exception as e:
                     logging.error(f"Error in release handler: {e}")
+                    return True
 
-            # Setup listener
+            # Setup listener with both press and release handlers
             self.full_control_hotkey_listener = keyboard.Listener(
                 on_press=on_press,
                 on_release=on_release
@@ -337,10 +333,10 @@ class MaestroControlsPlugin(OrthyPlugin):
             self.full_control_hotkey_listener.daemon = True
             self.full_control_hotkey_listener.start()
             logging.info("Full Control Hotkeys listener started")
-
+            
         except Exception as e:
-            logging.error(f"Failed to start hotkeys: {e}")
-            messagebox.showerror("Error", f"Failed to start hotkeys: {e}")
+            logging.error(f"Failed to start Full Control Hotkeys: {e}")
+            messagebox.showerror("Hotkey Error", f"Failed to start Full Control Hotkeys: {e}")
 
     def stop_full_control_hotkeys(self):
         """
