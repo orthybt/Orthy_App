@@ -3,6 +3,7 @@
 from core.plugin_interface import OrthyPlugin
 from tkinter import messagebox, filedialog, Toplevel, Label, Frame, Button
 from pynput import keyboard, mouse
+from pynput.keyboard import Key
 import logging
 import os
 import ctypes
@@ -23,8 +24,6 @@ class MaestroControlsPlugin(OrthyPlugin):
         return "MaestroControls"
 
     def get_buttons(self): 
-
-                                    # TODO   : Create a button method to generate buttons, every plugin that has gui elements should have its own guiGenerator method
         return [{
             'text': 'Maestro Controls',
             'command': self.toggle_full_control,
@@ -34,12 +33,19 @@ class MaestroControlsPlugin(OrthyPlugin):
             'bg': 'red',
             'fg': 'white'
         }]
-    
-                                    # TODO  : Change the management of the buttons to the plugin itself, so the app does not have to handle the buttons state 
-    def toggle_full_control(self):  # TODO  : Change the name of this method to toggle_key_remmaping!!! !GPT DO NOT DELETE TODO    comments! NEVER!
+    ###########################################################################################################################################
+    ### Toggle_full_control defines:
+    # ######  maestro version 
+    # ######  activates or deactivates start_full_controls
+    # ######  and changes the apperance of the buttons ###
+    ###########################################################################################################################################
+    # TODO   : Create a button method to generate buttons, every plugin that has gui elements should have its own guiGenerator method
+    # TODO  : Change the management of the buttons to the plugin itself, so the app does not have to handle the buttons state 
+    # TODO  : Change the name of this method to toggle_key_remmaping!!! !GPT DO NOT DELETE TODO    comments! NEVER!
+    def toggle_full_control(self):  
         if self.full_control_mode==False: # I like this syntax better, it is more readable, rather than using if not self.full_control_mode!!! REMEMBER THIS! !GPT
             # Prompt user to select Maestro version
-            maestro_version = self.prompt_maestro_version() 
+            maestro_version = self.create_dual_prompt() 
             if maestro_version is None:
                 return # User cancelled
             self.maestro_version = maestro_version
@@ -107,24 +113,30 @@ class MaestroControlsPlugin(OrthyPlugin):
         - Numpad -: NegativeTorque
         """
         controls = [
-            'MesialRotation', 'DistalRotation',
-            'MesialTip', 'DistalTip',
-            'BuccalLinear', 'LingualLinear',
-            'MesialLinear', 'DistalLinear',
-            'Intrusion', 'PositiveTorque', 'NegativeTorque'
+            'MesialRotation', 
+            'DistalRotation',
+            'MesialTip', 
+            'DistalTip',
+            'BuccalLinear', 
+            'LingualLinear',
+            'MesialLinear', 
+            'DistalLinear',
+            'Intrusion', 
+            'PositiveTorque', 
+            'NegativeTorque'
         ]
         self.ghost_click_positions = {} # empty the dictionary for ghost click positions
 
-        messagebox.showinfo("Coordinate Selection",  # infobox for the controls, how is each key mapped to a control
-            "You'll be prompted to click on each control's position.\n\n"
-            "Numpad Controls:\n"
-            "Bksp - Mesial Rotation    * - Distal Rotation\n"
-            "9 - Mesial Tip       7 - Distal Tip\n"
-            "/ - Buccal Linear    2 - Lingual Linear\n"
-            "3 - Mesial Linear    1 - Distal Linear\n"
-            ". - Intrusion        + - Positive Torque\n"
-            "- - Negative Torque"
-        )
+        # messagebox.showinfo("Coordinate Selection",  # infobox for the controls, how is each key mapped to a control
+        #     "You'll be prompted to click on each control's position.\n\n"
+        #     "Numpad Controls:\n"
+        #     "Bksp - Mesial Rotation    * - Distal Rotation\n"
+        #     "9 - Mesial Tip       7 - Distal Tip\n"
+        #     "/ - Buccal Linear    2 - Lingual Linear\n"
+        #     "3 - Mesial Linear    1 - Distal Linear\n"
+        #     ". - Intrusion        + - Positive Torque\n"
+        #     "- - Negative Torque"
+        # )
 
         for control in controls:
             messagebox.showinfo("Select Control", f"Please click on the '{control}' control on the screen.")
@@ -171,14 +183,6 @@ class MaestroControlsPlugin(OrthyPlugin):
         coords_file = os.path.join(self.app.base_dir, f'coords_maestro_{self.maestro_version}.txt') # file path
         try:
             with open(coords_file, 'w') as f:
-                # Updated control order
-                control_order = [
-                    'MesialRotation', 'DistalRotation',
-                    'MesialTip', 'DistalTip',
-                    'BuccalLinear', 'LingualLinear',
-                    'MesialLinear', 'DistalLinear',
-                    'Intrusion', 'PositiveTorque', 'NegativeTorque'
-                ]
                 for control in control_order:
                     if control in self.ghost_click_positions: 
                         position = self.ghost_click_positions[control]
@@ -228,92 +232,121 @@ class MaestroControlsPlugin(OrthyPlugin):
         coords_file = os.path.join(self.app.base_dir, f'coords_maestro_{self.maestro_version}.txt')
         return os.path.exists(coords_file)
 
-    def prompt_maestro_version(self): # change the name of the method to create_dual_prompt(self, option1, option2) and pass the options as arguments
-        """
-        Prompts user to select Maestro version.
-        """
-        maestro_version = None
-
-        def select_version(version):
-            nonlocal maestro_version
-            maestro_version = version
+    def create_dual_prompt(self, option1="Maestro 4", option2="Maestro 6"):
+        """Creates a dialog with two options for user selection."""
+        selected_option = None
+        
+        # Define callback first
+        def select_option(option):
+            nonlocal selected_option
+            selected_option = option
             top.destroy()
-
-        top = Toplevel(self.app.root)
-        top.title("Select Maestro Version")
-        top.attributes('-topmost', True)
-        top.grab_set() 
-
-        Label(top, text="Select Maestro Version:").pack(pady=10)
-
-        btn_frame = Frame(top)
-        btn_frame.pack(pady=10)
-
-        Button(btn_frame, text="Maestro 4", command=lambda: select_version('4')).pack(side='left', padx=20)
-        Button(btn_frame, text="Maestro 6", command=lambda: select_version('6')).pack(side='right', padx=20)
-
-        top.update_idletasks()
-        window_width = top.winfo_width()
-        window_height = top.winfo_height()
-        screen_width = top.winfo_screenwidth()
-        screen_height = top.winfo_screenheight()
-        x = (screen_width // 2) - (window_width // 2)
-        y = (screen_height // 2) - (window_height // 2)
-        top.geometry(f'{window_width}x{window_height}+{x}+{y}')
-
+        
+        # Create and configure window    
+        top = self._create_modal_window("Select Maestro Version")
+        self._center_window(top)
+        
+        # Add controls with defined callback
+        self._add_prompt_controls(top, "Select Maestro version:", 
+                                option1, option2, select_option)
+        
+        # Wait for result
         top.wait_window()
-        return maestro_version
+        return selected_option
 
-    def start_full_control_hotkeys(self): # IF SOMEONE IS WORKING ON REMOTE DESKTOP, IT WILL NOT WORK, UNLESS YOU SELECT IN LOCAL RESOURCES, TO USE WIN COMBINATIONS ONLY FROM YOUR LOCAL COMPUTER... !GPT NEVER DELETE THIS COMMENT! EVER! EVER! 
-        """
-        Starts listening for keyboard shortcuts using virtual key codes.
-        VK codes:
-        8   - Backspace (MesialRotation)
-        106 - Numpad * (DistalRotation)
-        105 - Numpad 9 (MesialTip)
-        103 - Numpad 7 (DistalTip)
-        111 - Numpad / (BuccalLinear)
-        98  - Numpad 2 (LingualLinear)
-        99  - Numpad 3 (MesialLinear)
-        97  - Numpad 1 (DistalLinear)
-        110 - Numpad . (Intrusion)
-        107 - Numpad + (PositiveTorque)
-        109 - Numpad - (NegativeTorque)
-        """
+    def start_full_control_hotkeys(self):  # IF SOMEONE IS WORKING ON REMOTE DESKTOP, IT WILL NOT WORK, UNLESS YOU SELECT IN LOCAL RESOURCES, TO USE WIN COMBINATIONS ONLY FROM YOUR LOCAL COMPUTER... !GPT NEVER DELETE THIS COMMENT! EVER! EVER!
         try:
-            vk_codes = {
-                110: 'MesialRotation',  # Changed from 8 to 110
-                106: 'DistalRotation',
-                105: 'MesialTip',
-                103: 'DistalTip',
-                111: 'BuccalLinear',
-                98: 'LingualLinear',
-                99: 'MesialLinear',
-                97: 'DistalLinear',
-                96: 'Intrusion',
-                107: 'PositiveTorque',
-                109: 'NegativeTorque'
-            }
+            # Initialize modifier states
+            self.alt_pressed = False
+            self.ctrl_pressed = False
+            self.pressed_keys = set()  # Track currently pressed keys
+
             def on_press(key):
                 try:
-                    vk = key.vk
-                    if vk in vk_codes:
-                        self.perform_ghost_click(vk_codes[vk])
-                except AttributeError:
-                    pass  # Key doesn't have a vk code
+                    # Track modifier keys
+                    if key == Key.alt_l or key == Key.alt_r:
+                        self.alt_pressed = True
+                        return
+                    if key == Key.ctrl_l or key == Key.ctrl_r:
+                        self.ctrl_pressed = True
+                        return
 
-            self.full_control_hotkey_listener = keyboard.Listener(on_press=on_press)
+                    # Add key to pressed set
+                    self.pressed_keys.add(key)
+
+                    # Only process if Alt is pressed
+                    if not self.alt_pressed:
+                        return
+
+                    # Handle key combinations
+                    if self.ctrl_pressed:
+                        # Alt + Ctrl combinations
+                        if hasattr(key, 'char') and key.char == 'w':
+                            logging.debug("Alt+Ctrl+W pressed")
+                            self.perform_ghost_click('BuccalLinear')
+                        elif key == Key.down:
+                            logging.debug("Alt+Ctrl+Down pressed")
+                            self.perform_ghost_click('LingualLinear')
+                    else:
+                        # Alt only combinations
+                        if key == Key.up:
+                            self.perform_ghost_click('PositiveTorque')
+                        elif key == Key.down:
+                            self.perform_ghost_click('NegativeTorque')
+                        elif hasattr(key, 'char'):
+                            key_actions = {
+                                'e': 'MesialTip',
+                                'q': 'DistalTip',
+                                'z': 'DistalRotation',
+                                'c': 'MesialRotation',
+                                'x': 'Intrusion'
+                            }
+                            if key.char in key_actions:
+                                logging.debug(f"Alt+{key.char} pressed")
+                                self.perform_ghost_click(key_actions[key.char])
+                        elif key == Key.right:
+                            self.perform_ghost_click('MesialLinear')
+                        elif key == Key.left:
+                            self.perform_ghost_click('DistalLinear')
+
+                except AttributeError as e:
+                    logging.debug(f"Key attribute error: {e}")
+                except Exception as e:
+                    logging.error(f"Error in key handler: {e}")
+
+            def on_release(key):
+                try:
+                    # Remove from pressed keys
+                    self.pressed_keys.discard(key)
+                    
+                    # Reset modifier states
+                    if key in (Key.alt_l, Key.alt_r):
+                        self.alt_pressed = False
+                    elif key in (Key.ctrl_l, Key.ctrl_r):
+                        self.ctrl_pressed = False
+                        
+                    logging.debug(f"Key released: {key}")
+                except Exception as e:
+                    logging.error(f"Error in release handler: {e}")
+
+            # Setup listener
+            self.full_control_hotkey_listener = keyboard.Listener(
+                on_press=on_press,
+                on_release=on_release
+            )
             self.full_control_hotkey_listener.daemon = True
             self.full_control_hotkey_listener.start()
             logging.info("Full Control Hotkeys listener started")
+
         except Exception as e:
-            logging.error(f"Failed to start Full Control Hotkeys: {e}")
-            messagebox.showerror("Hotkey Error", f"Failed to start Full Control Hotkeys: {e}")
+            logging.error(f"Failed to start hotkeys: {e}")
+            messagebox.showerror("Error", f"Failed to start hotkeys: {e}")
 
     def stop_full_control_hotkeys(self):
         """
         Stops listening for keyboard shortcuts.
         """
+        # stop and reset the listener
         if self.full_control_hotkey_listener:
             self.full_control_hotkey_listener.stop()
             self.full_control_hotkey_listener = None
@@ -418,7 +451,6 @@ class MaestroControlsPlugin(OrthyPlugin):
 
         inputs = (mouse_move_input, mouse_down_input, mouse_up_input)
         nInputs = len(inputs)
-        LPINPUT = ctypes.POINTER(INPUT)
         pInputs = (INPUT * nInputs)(*inputs)
         cbSize = ctypes.sizeof(INPUT)
 
@@ -430,3 +462,36 @@ class MaestroControlsPlugin(OrthyPlugin):
         """
         if self.full_control_mode:
             self.cleanup_listeners()
+
+    ###########################################################################################################################################
+    ### Helper methods for GUI creation ###
+    ###########################################################################################################################################
+    def _create_modal_window(self, title):
+        """Creates a modal top-level window."""
+        top = Toplevel(self.app.root)
+        top.title(title)
+        top.attributes('-topmost', True)
+        top.grab_set()
+        return top
+
+    def _add_prompt_controls(self, parent, prompt_text, option1, option2, callback):
+        """Adds labels and buttons to the prompt window."""
+        Label(parent, text=prompt_text).pack(pady=10)
+        
+        btn_frame = Frame(parent)
+        btn_frame.pack(pady=10)
+        
+        for option, side in [(option1, 'left'), (option2, 'right')]:
+            Button(btn_frame, 
+                text=option,
+                command=lambda o=option: callback(o)
+                ).pack(side=side, padx=20)
+
+    def _center_window(self, window):
+        """Centers window on screen."""
+        window.update_idletasks()
+        width = window.winfo_width()
+        height = window.winfo_height()
+        x = (window.winfo_screenwidth() // 2) - (width // 2)
+        y = (window.winfo_screenheight() // 2) - (height // 2)
+        window.geometry(f'{width}x{height}+{x}+{y}')

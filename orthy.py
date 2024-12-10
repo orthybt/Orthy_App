@@ -19,7 +19,7 @@ import logging
 from logging import Handler
 import tkinter as tk
 from  core.plugin_loader import PluginLoader # Import the PluginLoader class from the core.plugin_loader module
-from plugins.key_remap import KeyRemapPlugin
+
 
 # Configure the logger
 logging.basicConfig(
@@ -106,6 +106,7 @@ class ImageOverlayApp:
         self.image_window_visible = False
         # Add small_font initialization before plugin loading
         self.small_font = tk.font.Font(size=8)
+        
         # Initialize plugin loader after font setup
         self.plugin_loader = PluginLoader()
         self.plugin_loader.load_plugins(self)
